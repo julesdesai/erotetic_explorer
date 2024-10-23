@@ -1,1 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialectical Mobile</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://unpkg.com/force-graph"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@200;400&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            margin: 0;
+            padding: 20px 20px 0 20px;
+            background-color: #F5F5F5;
+            font-family: 'Archivo', sans-serif;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            height: 40px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            height: 40px;
+            padding: 0 15px;
+            border: none;
+            background: white;
+            font-family: 'Archivo', sans-serif;
+            font-size: 0.9em;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .depth-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8em;
+        }
+
+        .depth-slider {
+            width: 100px;
+            -webkit-appearance: none;
+            height: 2px;
+            background: #ccc;
+            outline: none;
+        }
+
+        .depth-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1D3557;
+            cursor: pointer;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 15px;
+            font-size: 0.8em;
+        }
+
+        .mode-option {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .mode-option input {
+            display: none;
+        }
+
+        .mode-option span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border: 1px solid #1D3557;
+            border-radius: 50%;
+        }
+
+        .mode-option input:checked + span {
+            background: #1D3557;
+        }
+
+        button {
+            height: 40px;
+            padding: 0 20px;
+            background: #1D3557;
+            color: white;
+            border: none;
+            font-family: 'Archivo', sans-serif;
+            font-size: 0.8em;
+            cursor: pointer;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: #2A4A73;
+        }
+
+        #graph {
+            flex-grow: 1;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            touch-action: none;
+            min-height: calc(100vh - 80px);
+        }
+
+        .node-label {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            pointer-events: none;
+            display: none;
+            max-width: 300px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            line-height: 1.4;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <input type="text" id="centralQuestion" placeholder="Enter your philosophical question...">
+        <div class="depth-control">
+            <label>Depth</label>
+            <input type="range" id="depthSlider" class="depth-slider" min="1" max="3" value="2">
+            <span id="depthValue">2</span>
+        </div>
+        <div class="mode-toggle">
+            <label class="mode-option">
+                <input type="radio" name="mode" value="general" checked>
+                <span></span>
+                General
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="mode" value="philosophical">
+                <span></span>
+                Philosophical
+            </label>
+        </div>
+        <button onclick="generateDialectic()">Generate</button>
+    </div>
+    <div id="graph"></div>
+    <div class="node-label"></div>
+
+    <script>
+        let graph;
+        const nodeLabel = document.querySelector('.node-label');
+
+        const colors = {
+            central: '#1D3557',
+            response: '#E63946',
+            objection: '#457B9D'
+        };
+
+        function drawCalderShape(ctx, x, y, size, type) {
+            ctx.beginPath();
+            const time = Date.now() / 2000;
+            
+            switch(type) {
+                case 'central':
+                    // Fluid central shape
+                    for (let i = 0; i <= 12; i++) {
+                        const angle = (i / 12) * Math.PI * 2;
+                        const radiusX = size * (1 + Math.sin(time + i * 0.5) * 0.3);
+                        const radiusY = size * (1 + Math.cos(time + i * 0.5) * 0.3);
+                        const px = x + Math.cos(angle) * radiusX;
+                        const py = y + Math.sin(angle) * radiusY;
+                        i === 0 ? ctx.moveTo(px, py) : ctx.bezierCurveTo(
+                            x + Math.cos(angle - 0.2) * radiusX * 1.1,
+                            y + Math.sin(angle - 0.2) * radiusY * 1.1,
+                            x + Math.cos(angle + 0.2) * radiusX * 1.1,
+                            y + Math.sin(angle + 0.2) * radiusY * 1.1,
+                            px, py
+                        );
+                    }
+                    break;
+                    
+                case 'response':
+                    // Organic flowing blob
+                    for (let i = 0; i <= 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2;
+                        const radius = size * (1 + Math.sin(time * 2 + i * 1.5) * 0.3);
+                        const px = x + Math.cos(angle) * radius;
+                        const py = y + Math.sin(angle) * radius;
+                        if (i === 0) {
+                            ctx.moveTo(px, py);
+                        } else {
+                            const prevAngle = ((i - 1) / 8) * Math.PI * 2;
+                            const cpRadius = radius * 1.2;
+                            ctx.quadraticCurveTo(
+                                x + Math.cos(angle - Math.PI/8) * cpRadius,
+                                y + Math.sin(angle - Math.PI/8) * cpRadius,
+                                px, py
+                            );
+                        }
+                    }
+                    break;
+                    
+                case 'objection':
+                    // Undulating form
+                    for (let i = 0; i <= 10; i++) {
+                        const angle = (i / 10) * Math.PI * 2;
+                        const radius = size * (1 + Math.sin(time * 1.5 + i) * 0.2);
+                        const px = x + Math.cos(angle) * radius;
+                        const py = y + Math.sin(angle) * radius;
+                        if (i === 0) {
+                            ctx.moveTo(px, py);
+                        } else {
+                            const prevAngle = ((i - 1) / 10) * Math.PI * 2;
+                            ctx.quadraticCurveTo(
+                                x + Math.cos((angle + prevAngle)/2) * radius * 1.2,
+                                y + Math.sin((angle + prevAngle)/2) * radius * 1.2,
+                                px, py
+                            );
+                        }
+                    }
+                    break;
+            }
+            
+            ctx.closePath();
+        }
+
+        function updateNodeLabel(node, x, y) {
+            if (node) {
+                const prefix = node.id === 'C' ? 'Question' :
+                              node.group === 'answer' ? 'Response' : 'Objection';
+                nodeLabel.textContent = `${prefix} ${node.display_id}: ${node.label}`;
+                nodeLabel.style.display = 'block';
+                
+                const graphRect = document.getElementById('graph').getBoundingClientRect();
+                const labelRect = nodeLabel.getBoundingClientRect();
+                
+                let posX = x + graphRect.left + 10;
+                let posY = y + graphRect.top - labelRect.height - 10;
+
+                if (posX + labelRect.width > window.innerWidth) {
+                    posX = window.innerWidth - labelRect.width - 10;
+                }
+                if (posY < 0) {
+                    posY = y + graphRect.top + 10;
+                }
+
+                nodeLabel.style.left = `${posX}px`;
+                nodeLabel.style.top = `${posY}px`;
+            } else {
+                nodeLabel.style.display = 'none';
+            }
+        }
+
+        function generateDialectic() {
+            const centralQuestion = document.getElementById('centralQuestion').value;
+            if (!centralQuestion) return;
+
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const depth = parseInt(document.getElementById('depthSlider').value);
+
+            fetch('/generate_questions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    question: centralQuestion,
+                    mode: mode,
+                    depth: depth
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    return;
+                }
+
+                const elem = document.getElementById('graph');
+                elem.innerHTML = '';
+
+                // Initialize force simulation
+                const simulation = d3.forceSimulation()
+                    .force('charge', d3.forceManyBody().strength(d => d.id === 'C' ? -500 : -200))
+                    .force('collision', d3.forceCollide().radius(30))
+                    .force('radial', d3.forceRadial(d => d.level * 150).strength(0.8))
+                    .force('link', d3.forceLink().id(d => d.id).distance(80).strength(0.5));
+
+                graph = ForceGraph()(elem)
+                    .graphData(data)
+                    .nodeId('id')
+                    .nodeVal(node => node.id === 'C' ? 15 : 10)
+                    .linkWidth(1)
+                    .linkColor('#ddd')
+                    .d3Force('charge', simulation.force('charge'))
+                    .d3Force('collision', simulation.force('collision'))
+                    .d3Force('radial', simulation.force('radial'))
+                    .d3Force('link', simulation.force('link'))
+                    .nodeCanvasObject((node, ctx, globalScale) => {
+                        const size = (node.id === 'C' ? 15 : 10) * Math.min(2, globalScale);
+                        const type = node.id === 'C' ? 'central' : 
+                                   node.group === 'answer' ? 'response' : 'objection';
+                        
+                        ctx.fillStyle = node.id === 'C' ? colors.central :
+                                      node.group === 'answer' ? colors.response : colors.objection;
+                        
+                        ctx.save();
+                        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                        ctx.shadowBlur = 5;
+                        ctx.shadowOffsetX = 2;
+                        ctx.shadowOffsetY = 2;
+                        
+                        drawCalderShape(ctx, node.x, node.y, size, type);
+                        ctx.fill();
+                        ctx.restore();
+                    })
+                    .onNodeHover((node, prevNode) => {
+                        elem.style.cursor = node ? 'pointer' : null;
+                        if (node) {
+                            const pos = graph.graph2ScreenCoords(node.x, node.y);
+                            updateNodeLabel(node, pos.x, pos.y);
+                        } else {
+                            updateNodeLabel(null);
+                        }
+                    })
+                    .onNodeDrag((node, translate) => {
+                        simulation.alpha(1).restart();
+                        if (node) {
+                            const pos = graph.graph2ScreenCoords(node.x, node.y);
+                            updateNodeLabel(node, pos.x, pos.y);
+                        }
+                    })
+                    .onNodeClick(node => {
+                        const distRatio = 1 + 2 * Math.max(node.x, node.y, Math.abs(node.x), Math.abs(node.y)) / Math.min(elem.width, elem.height);
+                        graph.centerAt(node.x, node.y, 1000);
+                        graph.zoom(1 / distRatio, 1000);
+                        simulation.alpha(1).restart();
+                    });
+
+                // Add continuous gentle movement
+                let angle = 0;
+                setInterval(() => {
+                    angle += 0.002;
+                    simulation.force('radial').angle(angle);
+                    simulation.alpha(0.1).restart();
+                }, 50);
+
+                // Add mouse movement influence
+                elem.addEventListener('mousemove', event => {
+                    const rect = elem.getBoundingClientRect();
+                    const mouseX = event.clientX - rect.left;
+                    const mouseY = event.clientY - rect.top;
+                    
+                    simulation.force('mouse', d3.forceRadial(100, mouseX, mouseY).strength(0.05));
+                    simulation.alpha(0.3).restart();
+                });
+
+                // Request animation frame for smooth updates
+                function animate() {
+                    graph.refresh();
+                    requestAnimationFrame(animate);
+                }
+                animate();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        document.getElementById('depthSlider').addEventListener('input', function() {
+            document.getElementById('depthValue').textContent = this.value;
+        });
+    </script>
+</body>
+</html>
