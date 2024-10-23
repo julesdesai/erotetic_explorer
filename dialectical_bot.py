@@ -7,11 +7,12 @@ import json
 app = Flask(__name__)
 
 # Configuration constants
-GPT_MODEL = "gpt-3.5-turbo"  # Can be changed to "gpt-4" or other models
+GPT_MODEL = "gpt-4o-mini"  # Can be changed to "gpt-4" or other models
 MAX_ITEMS = 3  # Reduced from 5 to 3
-API_KEY = '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'
 
-client = OpenAI(api_key=API_KEY)
+# Get API key from environment variable
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
 
 def debug_print(title, content):
     print(f"\n=== {title} ===")
