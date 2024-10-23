@@ -191,4 +191,6 @@ def generate_questions_and_answers():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Only use debug mode locally
+    debug_mode = os.getenv('FLASK_ENV') == 'development'
+    app.run(debug=debug_mode)
