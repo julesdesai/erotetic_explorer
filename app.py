@@ -10,9 +10,9 @@ app = Flask(__name__)
 # Configuration constants
 GPT_MODEL = "gpt-4o-mini"  # Can be changed to "gpt-4" or other models
 MAX_ITEMS = 3  # Reduced from 5 to 3
-
+API_KEY = os.getenv('OPENAI_API_KEY')
 # Get API key from environment variable
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+client = OpenAI(API_KEY)
 
 
 def debug_print(title, content):
