@@ -1,6 +1,8 @@
 # erotetic_explorer
 Philosophy Dialetical Visualiser for Erotetic Theory Approach to Philosophising
 
+Made by me with Claude's assitance
+
 Implemented at: https://erotetic-explorer.onrender.com/
 
 A web application that generates and visualizes dialectical trees of questions, responses, and objections using Flask, D3.js, and OpenAI's GPT API. The application creates dynamic, interactive visualizations inspired by Alexander Calder's mobile sculptures.
